@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>99Freelas notifica</title>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        body {
+            width: 280px;
+            padding: 15px;
+            background: linear-gradient(135deg, #0f172a, #1e293b);
+            color: #f1f5f9;
+        }
+
+        h3 {
+            text-align: center;
+            margin-bottom: 15px;
+            font-size: 16px;
+            letter-spacing: 1px;
+            color: #38bdf8;
+        }
+
+        #status {
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        .ativo {
+            color: #22c55e;
+        }
+
+        .inativo {
+            color: #ef4444;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            transition: 0.3s ease;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+
+        .btn-ativar {
+            background-color: #22c55e;
+            color: white;
+        }
+
+        .btn-desativar {
+            background-color: #ef4444;
+            color: white;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        .footer {
+            margin-top: 18px;
+            font-size: 11px;
+            opacity: 0.7;
+            text-align: center;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            padding-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <h3>99Freelas Notifica</h3>
+
+    <div id="status" class="inativo">Extensão desativada</div>
+
+    <button id="toggle" class="btn-ativar">Ativar</button>
+
+    <div class="footer">
+        <p>Feito por: Ronye Vantzing</p>
+        <p>Última alteração: 21/01/2025 às 01:48:52</p>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html>
