@@ -42,7 +42,7 @@ chrome.storage.onChanged.addListener((changes) => {
 });
 
 /* =====================================
-   Função principal (SEM abrir guia)
+   Função principal
 ===================================== */
 
 async function verificarProjetos() {
@@ -60,81 +60,93 @@ async function verificarProjetos() {
 
     try {
 
-        const response = await fetch(URL_LISTA, {
-            method: "GET",
-            credentials: "include"
+        const aba = await chrome.tabs.create({
+            url: URL_LISTA,
+            active: false
         });
 
-        if (!response.ok) {
-            throw new Error("Erro ao buscar página");
-        }
+        chrome.tabs.onUpdated.addListener(function listener(tabId, info) {
 
-        const html = await response.text();
+            if (tabId === aba.id && info.status === "complete") {
 
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(html, "text/html");
+                chrome.tabs.onUpdated.removeListener(listener);
 
-        const projetos = Array.from(doc.querySelectorAll(".result-item"))
-            .map(item => {
+                chrome.scripting.executeScript({
+                    target: { tabId: aba.id },
+                    func: () => {
 
-                const link = item.querySelector(".title a");
-                const datetime = item.querySelector(".datetime");
+                        return Array.from(document.querySelectorAll(".result-item"))
+                            .map(item => {
 
-                if (!link || !datetime) return null;
+                                const link = item.querySelector(".title a");
+                                const datetime = item.querySelector(".datetime");
 
-                return {
-                    titulo: link.innerText.trim(),
-                    url: link.href,
-                    timestamp: Number(datetime.getAttribute("cp-datetime"))
-                };
-            })
-            .filter(Boolean);
+                                if (!link || !datetime) return null;
 
-        if (!projetos.length) {
-            executando = false;
-            return;
-        }
+                                return {
+                                    titulo: link.innerText.trim(),
+                                    url: link.href,
+                                    timestamp: Number(datetime.getAttribute("cp-datetime"))
+                                };
+                            })
+                            .filter(Boolean);
+                    }
 
-        // Ordena do mais recente para o mais antigo
-        projetos.sort((a, b) => b.timestamp - a.timestamp);
+                }, async (results) => {
 
-        // Primeira execução (não notifica nada)
-        if (ultimoTimestamp === 0) {
+                    const projetos = results?.[0]?.result || [];
 
-            await chrome.storage.local.set({
-                ultimoTimestamp: projetos[0].timestamp
-            });
+                    await chrome.tabs.remove(aba.id);
 
-            executando = false;
-            return;
-        }
+                    if (!projetos.length) {
+                        executando = false;
+                        return;
+                    }
 
-        // Filtra apenas projetos mais recentes
-        const novos = projetos.filter(p =>
-            p.timestamp > ultimoTimestamp
-        );
+                    // Ordena do mais recente para o mais antigo
+                    projetos.sort((a, b) => b.timestamp - a.timestamp);
 
-        if (novos.length > 0) {
+                    // Primeira execução (não notifica nada)
+                    if (ultimoTimestamp === 0) {
 
-            // Notifica do mais antigo para o mais recente
-            novos
-                .sort((a, b) => a.timestamp - b.timestamp)
-                .forEach(projeto => notificar(projeto));
+                        await chrome.storage.local.set({
+                            ultimoTimestamp: projetos[0].timestamp
+                        });
 
-            const maiorTimestamp = Math.max(
-                ...novos.map(p => p.timestamp)
-            );
+                        executando = false;
+                        return;
+                    }
 
-            await chrome.storage.local.set({
-                ultimoTimestamp: maiorTimestamp
-            });
-        }
+                    // Filtra apenas projetos mais recentes
+                    const novos = projetos.filter(p =>
+                        p.timestamp > ultimoTimestamp
+                    );
+
+                    if (novos.length > 0) {
+
+                        // Notifica do mais antigo para o mais recente
+                        novos
+                            .sort((a, b) => a.timestamp - b.timestamp)
+                            .forEach(projeto => notificar(projeto));
+
+                        const maiorTimestamp = Math.max(
+                            ...novos.map(p => p.timestamp)
+                        );
+
+                        await chrome.storage.local.set({
+                            ultimoTimestamp: maiorTimestamp
+                        });
+                    }
+
+                    executando = false;
+                });
+            }
+        });
 
     } catch (error) {
         console.error("Erro ao verificar projetos:", error);
+        executando = false;
     }
-
-    executando = false;
 }
 
 /* =====================================
@@ -149,10 +161,7 @@ function notificar(projeto) {
             type: "basic",
             iconUrl: "icons/icon128.png",
             title: "Novo projeto no 99Freelas!",
-            message: projeto.titulo,
-            buttons: [
-                { title: "Abrir projeto" }
-            ]
+            message: projeto.titulo
         }
     );
 
@@ -160,21 +169,3 @@ function notificar(projeto) {
         ["notif_" + projeto.timestamp]: projeto.url
     });
 }
-
-chrome.notifications.onButtonClicked.addListener(
-    async (notificationId, buttonIndex) => {
-
-        if (buttonIndex === 0) {
-
-            const key = "notif_" + notificationId;
-            const result = await chrome.storage.local.get(key);
-            const url = result[key];
-
-            if (url) {
-                chrome.tabs.create({ url });
-            }
-
-            chrome.notifications.clear(notificationId);
-        }
-    }
-);
